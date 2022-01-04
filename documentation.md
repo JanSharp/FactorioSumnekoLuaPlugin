@@ -125,6 +125,16 @@ script.on_event(on_custom_event, function(event) --##
 end)
 ```
 
+-- TODO: add an example for this specific case and figure out which other cases need examples and how to display them nicely
+```lua
+-- in the context of on_init and on_load
+script.on_event(
+  remote.call("other_mod_remote", "get_their_event_name"),
+  function(event)
+  end
+)
+```
+
 -->
 
 # Remotes

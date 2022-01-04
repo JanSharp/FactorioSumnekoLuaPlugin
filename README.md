@@ -113,7 +113,7 @@ If the language server sees multiple mods it can happen that it thinks your `glo
 
 ## Event Handler Parameter Annotating
 
-When using generated EmmyLua docs for the Factorio API from the JSON docs ([such as mentioned in this section](https://github.com/justarandomgeek/vscode-factoriomod-debug/blob/master/workspace.md#editor--extensions)) the plugin can help reduce how many type annotating you have to write manually by automatically adding type annotations for event handler parameters within `script.on_event` calls (or the other 2 variants from [flib](https://factoriolib.github.io/flib/modules/event.html) or [Stdlib](http://afforess.github.io/Factorio-Stdlib/modules/Event.Event.html)). This also works with an array of event names.
+When using generated EmmyLua docs for the Factorio API from the JSON docs ([such as mentioned in this section](https://github.com/justarandomgeek/vscode-factoriomod-debug/blob/master/workspace.md#editor--extensions)) the plugin can help reduce how many type annotations you have to write manually by automatically adding type annotations for event handler parameters within `script.on_event` calls (or the other 2 variants from [flib](https://factoriolib.github.io/flib/modules/event.html) or [Stdlib](http://afforess.github.io/Factorio-Stdlib/modules/Event.Event.html)). This also works with an array of event names.
 
 If you ever want or need this to be disabled for a specific event handler put `--##` somewhere after the parameter name of the handler but before the end of line. This may be required when annotating custom event handlers.
 
