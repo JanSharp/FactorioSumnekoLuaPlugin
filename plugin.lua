@@ -7,48 +7,93 @@
 
 ---Dev Notes: confirm "path/to/lua-language-server/script/", in Lua.Workspace.Library for completions
 
--- allow for require to search relative to this plugin file
--- open for improvements!
-local fs = require("bee.filesystem")
-local workspace = require("workspace")
-local scope = require("workspace.scope")
-local plugin_path = fs.path(scope.getScope(workspace.rootUri):get('pluginPath'))
-local new_path = (plugin_path:parent_path() / "?.lua"):string()
-if not package.path:find(new_path, 1, true) then
-  package.path = package.path..";"..new_path
-end
----End of require stuff
-
-local workspace = require("workspace")
-local scope = require("workspace.scope")
+local scp = require("workspace.scope")
 
 local require_module = require("factorio-plugin.require")
 local global = require("factorio-plugin.global")
 local remote = require("factorio-plugin.remote")
 local on_event = require("factorio-plugin.on-event")
 
+---@alias fplugin.modes 'folder' | 'mods'
+---@class fplugin.settings
+---@field mode fplugin.modes
+---@field mod_name? string
+---@field mods_root? string
+local settings = {
+  mode = "folder",
+  fallback_mod_name = "FallbackModName"
+}
+
+do ---@block Settings
+  local args = select(2, ...) ---@type string[]
+  for i = 1, #args do
+    --mode: Switch between folder mode where each mod is its own workspace, and mods mode where the root mods folder is the workspace.
+    local setting, mode = args[i]:match("^%-%-(%w+)%s*(%w+)") ---@type string, string
+    if setting == "mode" then
+      if not (mode == "folder" or mode == "mods") then
+        return log.error("wrong mode for plugin: ".. mode .. " expected 'mods' or 'folder'.")
+      end
+      settings.mode = mode
+      log.info(("Plugin running in %s mode"):format(mode))
+    end
+  end
+end
+print("Factorio Plugin loaded in ".. settings.mode .." mode")
+
+local function get_mod_name(uri)
+  if settings.mod_name then return settings.mod_name end
+
+  local mod_name ---@type string?
+
+  ---Cache the mod name in folder mode
+  if settings.mode == "folder" then
+    mod_name = scp.getScope(uri).uri:match("[^/\\]+$")  --[[@as string?]]
+    settings.mod_name = mod_name
+    return mod_name
+  end
+
+  ---Mods mode the mod name changes depending on the file being edited
+  if settings.mode == "mods" then
+    -- The root folder path
+    local root = settings.mods_root
+    if not root then
+      local scope = scp.getScope(uri)
+      -- get the end folder of root path
+      root = scope.uri:match("[^/\\]+$")
+      settings.mods_root = root
+    end
+
+    -- get the first folder after root path
+    mod_name = uri:match(root .."[\\/]([^\\/]+)[\\/]") --[[@as string?]]
+    if not mod_name then
+      log.warn(("Could not determine mod name for uri: %s in %s mode."):format(uri, settings.mode))
+      mod_name = settings.fallback_mod_name
+    end
+    print("in mod name ", mod_name)
+    return mod_name
+  end
+
+  return settings.fallback_mod_name
+end
+
+---@alias Diff.ArrayWithCount {[integer]: Diff, ["count"]: integer}
 ---@class Diff
 ---@field start integer @ The number of bytes at the beginning of the replacement
 ---@field finish integer @ The number of bytes at the end of the replacement
 ---@field text string @ What to replace
 
----@alias Diff.ArrayWithCount {[integer]: Diff, ["count"]: integer}
-
 ---@param uri string @ The uri of file
 ---@param text string @ The content of file
 ---@return nil|Diff[]
 function OnSetText(uri, text)
-  if not workspace.isReady(uri) then return end
-  if scope.getScope(uri):isLinkedUri(uri) then return end
+  if scp.getScope(uri):isLinkedUri(uri) then return end
 
-  ---I can't see a reason to process ---@meta files
-  ---Speeds up loading by not reading annotation files
   if text:sub(1, 8) == "---@meta" or text:sub(1, 4) == "--##" then return end
 
   local diffs = {count = 0} ---@type Diff.ArrayWithCount
 
   require_module.replace(uri, text, diffs)
-  global.replace(uri, text, diffs)
+  global.replace(uri, text, diffs, get_mod_name(uri))
   remote.replace(uri, text, diffs)
   on_event.replace(uri, text, diffs)
 
