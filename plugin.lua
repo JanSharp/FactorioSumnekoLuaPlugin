@@ -12,22 +12,27 @@
 
 local scp = require("workspace.scope")
 
-local settings = require("factorio-plugin.settings")
 local require_module = require("factorio-plugin.require")
 local global = require("factorio-plugin.global")
 local remote = require("factorio-plugin.remote")
 local on_event = require("factorio-plugin.on-event")
-print("Factorio Plugin loaded in " .. settings.mode .. " mode")
 
-  --[[
-    In `folder` mode cache and return the mod name.\
-    In `mods` mode the mod name changes depending on the file being edited so it can't be cached in `settings.mod_name`.\
-    For example in the file `C:\\Factorio-Game\\MyModsFolder\\MyMod\\control.lua`
-    The mod_root would be `MyModsFolder` which can be cached as `settings.mod_root` and `MyMod` would be the mod_name which can't be cached.
-  ]]
+local furi = select(2, ...)
+local plugin_args = select(3, ...)
+print("Plugin Loaded:", furi)
+
+local settings = require("factorio-plugin.settings")(furi, plugin_args)
+
+--[[
+  In `folder` mode cache and return the mod name.\
+  In `mods` mode the mod name changes depending on the file being edited so it can't be cached in `settings.mod_name`.\
+  For example in the file `C:\\Factorio-Game\\MyModsFolder\\MyMod\\control.lua`
+  The mod_root would be `MyModsFolder` which can be cached as `settings.mod_root` and `MyMod` would be the mod_name which can't be cached.
+]]
 ---@param scope scope
 ---@param file_uri string
 local function get_mod_name(scope, file_uri)
+  -- local settings = scope:get("pluginInterface").settings
   -- if settings.mod_name then return settings.mod_name end
 
   local mode = settings.mode
@@ -78,7 +83,7 @@ function OnSetText(uri, text)
   local diffs = { count = 0 } ---@type Diff.ArrayWithCount
 
   if not settings.disable_require then require_module(uri, text, diffs) end
-  if not settings.disable_global then global(uri, text, diffs, get_mod_name(scope, uri)) end
+  if not settings.disable_global then global(uri, text, diffs, get_mod_name(scope, uri), settings) end
   if not settings.disable_remote then remote(uri, text, diffs) end
   if not settings.disable_event then on_event(uri, text, diffs) end
 

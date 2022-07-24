@@ -1,7 +1,6 @@
 --##
 
 local util = require("factorio-plugin.util")
-local settings = require("factorio-plugin.settings")
 local table_concat = table.concat
 
 ---Cache table for building the global name
@@ -14,8 +13,7 @@ local global_name_builder = { "__", "FallbackModName", "__", "global" }
 ---@param text string @ The content of file
 ---@param diffs Diff[] @ The diffs to add more diffs to
 ---@param this_mod? string
-local function replace(uri, text, diffs, this_mod)
-
+local function replace(uri, text, diffs, this_mod, settings)
   local scenario = uri:match("scenarios[\\/]([^\\/]+)[\\/]") --[[@as string?]]
   local as_class = settings.global_as_class
   local no_warn = settings.no_class_warning
