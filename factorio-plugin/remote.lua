@@ -127,6 +127,4 @@ local function replace(_, text, diffs)
   end
 end
 
-return {
-  replace = replace,
-}
+return replace

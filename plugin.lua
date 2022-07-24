@@ -105,10 +105,10 @@ function OnSetText(uri, text)
 
   local diffs = { count = 0 } ---@type Diff.ArrayWithCount
 
-  require_module.replace(uri, text, diffs)
-  global.replace(uri, text, diffs, get_mod_name(scope, uri))
-  remote.replace(uri, text, diffs)
-  on_event.replace(uri, text, diffs)
+  require_module(uri, text, diffs)
+  global(uri, text, diffs, get_mod_name(scope, uri))
+  remote(uri, text, diffs)
+  on_event(uri, text, diffs)
 
   diffs.count = nil
   return diffs

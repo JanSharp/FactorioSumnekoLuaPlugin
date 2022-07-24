@@ -55,6 +55,4 @@ local function replace(uri, text, diffs, this_mod)
   end
 end
 
-return {
-  replace = replace,
-}
+return replace
