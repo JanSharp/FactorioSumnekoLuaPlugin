@@ -4,7 +4,6 @@ local util = require("factorio-plugin.util")
 local table_concat = table.concat
 
 ---Cache table for building the global name
-local disable_undef = "---@diagnostic disable-next-line: undefined-doc-name\n"
 local global_class_builder = { "---@type ", "", ".", "", "", "global","\n" }
 local global_name_builder = { "__", "FallbackModName", "__", "global" }
 
@@ -13,10 +12,10 @@ local global_name_builder = { "__", "FallbackModName", "__", "global" }
 ---@param text string @ The content of file
 ---@param diffs Diff[] @ The diffs to add more diffs to
 ---@param this_mod? string
+---@param settings fplugin.settings
 local function replace(uri, text, diffs, this_mod, settings)
   local scenario = uri:match("scenarios[\\/]([^\\/]+)[\\/]") --[[@as string?]]
   local as_class = settings.global_as_class
-  local no_warn = settings.no_class_warning
 
   ---Build the global name and replace any special characters with _
   global_name_builder[2] = this_mod or settings.fallback_mod_name
@@ -61,7 +60,7 @@ local function replace(uri, text, diffs, this_mod, settings)
 
     ---Putting it in _G. prevents the need to disable lowecase-global
     local class_str = as_class and table_concat(global_class_builder, "")
-    local global_replacement = { as_class and not no_warn and disable_undef or "","_G.", global_name, " = {}", class_str or "\n"}
+    local global_replacement = { "_G.", global_name, " = {} ", class_str or "\n"}
     util.add_diff(diffs, 1, 1, table_concat(global_replacement, ""))
   end
 end

@@ -27,11 +27,6 @@ return function(_, plugin_args)
       print(_, "Global will be defined as a class")
     end
 
-    if setting == "no-class-warning" then
-      settings.no_class_warning = true
-      print(_, "No warning on undefined global class")
-    end
-
     if setting == "disable" then
       ---@cast option fplugin.settings.modules
       if option == "event" then
@@ -49,7 +44,7 @@ return function(_, plugin_args)
   return settings
 end
 
----@alias fplugin.settings.available_settings 'mode'|'global'|'no_class_warning'|'disable'
+---@alias fplugin.settings.available_settings 'mode'|'global-as-class'|'disable'
 ---@alias fplugin.settings.modules 'event'|'require'|'global'|'remote'
 ---@alias fplugin.settings.modes 'folder' | 'mods'
 
