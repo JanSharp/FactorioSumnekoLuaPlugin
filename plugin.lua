@@ -5,45 +5,18 @@
 -- what do the different prefixes for gmatch results mean:
 -- s = start, f = finish, p = position, no prefix = an actual string capture
 
+-- sample Arguments:
+-- "Lua.runtime.pluginArgs": ["--mode mods", "--global-as-class", "--no-class-warning", "--disable event", "--disable require"]
+
 ---Dev Notes: confirm "path/to/lua-language-server/script/", in Lua.Workspace.Library for completions
 
-local ws = require("workspace")
 local scp = require("workspace.scope")
-local cfg = require('config')
 
+local settings = require("factorio-plugin.settings")
 local require_module = require("factorio-plugin.require")
 local global = require("factorio-plugin.global")
 local remote = require("factorio-plugin.remote")
 local on_event = require("factorio-plugin.on-event")
-
----@alias fplugin.modes 'folder' | 'mods'
----@class fplugin.settings
----@field mode fplugin.modes
----@field mod_name? string Cached value of the mod name, not used if mode is `mods`
----@field mods_root? string Cached value of the mods root folder, not used if mode is `folder`
-local settings = {
-  mode = "folder",
-  fallback_mod_name = "FallbackModName",
-  ---pluginArgs can be retrieve from the config object or as the second vararg of this chunk.
-  plugin_args = cfg.get(ws.rootUri, "Lua.runtime.pluginArgs") ---@type string[]
-}
-
-do ---@block Settings
-  local args = settings.plugin_args
-  for i = 1, #args do
-    ---`--mode` can be either
-    ---`folder` where each mod is its own workspace, or
-    ---`mods` where the root mods folder is the workspace.
-    local setting, mode = args[i]:match("^%-%-(%w+)%s*(%w+)") ---@type string, string
-    if setting == "mode" then
-      if not (mode == "folder" or mode == "mods") then
-        return log.error("wrong mode for plugin: " .. mode .. " expected 'mods' or 'folder'.")
-      end
-      settings.mode = mode
-      log.info(("Plugin running in %s mode"):format(mode))
-    end
-  end
-end
 print("Factorio Plugin loaded in " .. settings.mode .. " mode")
 
   --[[
@@ -84,7 +57,6 @@ local function get_mod_name(scope, file_uri)
     end
     return mod_name
   end
-
   ---Shouldn't be possible to here here, but just in case.
   return settings.fallback_mod_name
 end
@@ -105,10 +77,10 @@ function OnSetText(uri, text)
 
   local diffs = { count = 0 } ---@type Diff.ArrayWithCount
 
-  require_module(uri, text, diffs)
-  global(uri, text, diffs, get_mod_name(scope, uri))
-  remote(uri, text, diffs)
-  on_event(uri, text, diffs)
+  if not settings.disable_require then require_module(uri, text, diffs) end
+  if not settings.disable_global then global(uri, text, diffs, get_mod_name(scope, uri)) end
+  if not settings.disable_remote then remote(uri, text, diffs) end
+  if not settings.disable_event then on_event(uri, text, diffs) end
 
   diffs.count = nil
   return diffs

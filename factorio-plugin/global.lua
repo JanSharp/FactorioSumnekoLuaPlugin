@@ -1,15 +1,13 @@
 --##
 
 local util = require("factorio-plugin.util")
+local settings = require("factorio-plugin.settings")
+local table_concat = table.concat
 
 ---Cache table for building the global name
-local global_name_builder = {
-  "__",
-  "FallbackModName",
-  "__",
-  "global",
-  "__",
-}
+local disable_undef = "---@diagnostic disable-next-line: undefined-doc-name\n"
+local global_class_builder = { "---@type ", "", ".", "", "", "global","\n" }
+local global_name_builder = { "__", "FallbackModName", "__", "global" }
 
 ---Rename `global` so we can tell them apart!
 ---@param uri string @ The uri of file
@@ -18,21 +16,26 @@ local global_name_builder = {
 ---@param this_mod? string
 local function replace(uri, text, diffs, this_mod)
 
-  local scenario = uri:match("scenarios[\\/]([^\\/]+)[\\/]")--[[@as string?]]
-  global_name_builder[2] = this_mod or "FallbackModName"
-  global_name_builder[6] = scenario and scenario or nil
-  global_name_builder[7] = scenario and "__" or nil
+  local scenario = uri:match("scenarios[\\/]([^\\/]+)[\\/]") --[[@as string?]]
+  local as_class = settings.global_as_class
+  local no_warn = settings.no_class_warning
 
   ---Build the global name and replace any special characters with _
-  local global_name = table.concat(global_name_builder, ""):gsub("[^a-zA-Z0-9_]","_")
+  global_name_builder[2] = this_mod or settings.fallback_mod_name
+  global_name_builder[5] = scenario and "__" or ""
+  global_name_builder[6] = scenario or ""
+  global_name_builder[7] = scenario and "__" or ""
+  local global_name = table_concat(global_name_builder, ""):gsub("[^a-zA-Z0-9_]", "_")
+
   local global_matches = {} ---@type integer[]
 
-  for start, finish in text:gmatch("%f[a-zA-Z0-9_]()global()%s*[=.%[]") --[[@as fun():integer, integer]] do
+  ---Find all matches for global ---@todo Assignment to global disable warning
+  for start, finish in text:gmatch("%f[a-zA-Z0-9_]()global()%s*[=.%[]") --[[@as fun():integer, integer]]do
     global_matches[start] = finish
   end
 
   ---Remove matches that were `global` indexing into something (`T.global`)
-  for start in text:gmatch("%.[^%S\n]*()global%s*[=.%[]") --[[@as fun():integer]] do
+  for start in text:gmatch("%.[^%S\n]*()global%s*[=.%[]") --[[@as fun():integer]]do
     global_matches[start] = nil
   end
 
@@ -45,13 +48,23 @@ local function replace(uri, text, diffs, this_mod)
   --   global_matches[start] = finish
   -- end
 
+  ---Replace all matching instances of `global` with the new global name
   for start, finish in pairs(global_matches) do
     util.add_diff(diffs, start, finish, global_name)
   end
 
   --- and "define" it at the start of any file that used it
   if next(global_matches) then
-    util.add_diff(diffs, 1, 1, global_name.."={}---@diagnostic disable-line:lowercase-global\n")
+    if as_class then
+      global_class_builder[2] = this_mod
+      global_class_builder[4] = scenario or ""
+      global_class_builder[5] = scenario and "." or ""
+    end
+
+    ---Putting it in _G. prevents the need to disable lowecase-global
+    local class_str = as_class and table_concat(global_class_builder, "")
+    local global_replacement = { as_class and not no_warn and disable_undef or "","_G.", global_name, " = {}", class_str or "\n"}
+    util.add_diff(diffs, 1, 1, table_concat(global_replacement, ""))
   end
 end
 
