@@ -33,8 +33,10 @@ local function replace(uri, text, diffs, this_mod, settings)
   end
 
   ---Remove matches that were `global` indexing into something (`T.global`)
-  for start in text:gmatch("%.[^%S\n]*()global%s*[=.%[]") --[[@as fun():integer]]do
-    global_matches[start] = nil
+  for dot_pos, start in text:gmatch("()%.[^%S\n]*()global%s*[=.%[]") --[[@as fun():integer, integer]]do
+      if text:sub(dot_pos - 1, dot_pos - 1) ~= "." then
+      global_matches[start] = nil
+      end
   end
 
   -- `_ENV.global` and `_G.global` now get removed because of this, we can add them back in
