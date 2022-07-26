@@ -4,18 +4,19 @@ local util = require("factorio-plugin.util")
 local table_concat = table.concat
 
 ---Cache table for building the global name
-local global_class_builder = { "---@type ", "", ".", "", "", "global","\n" }
+local global_class_builder = { " ---@type ", "", ".", "", "", "global","\n" }
 local global_name_builder = { "__", "FallbackModName", "__", "global" }
 
 ---Rename `global` so we can tell them apart!
+---@api Move settings to the top scope of the file if sandboxing is added.
 ---@param uri string @ The uri of file
 ---@param text string @ The content of file
----@param diffs Diff[] @ The diffs to add more diffs to
+---@param diffs Diff.ArrayWithCount @ The diffs to add more diffs to
 ---@param this_mod? string
 ---@param settings fplugin.settings
 local function replace(uri, text, diffs, this_mod, settings)
   local scenario = uri:match("scenarios[\\/]([^\\/]+)[\\/]") --[[@as string?]]
-  local as_class = settings.global_as_class
+  local as_class = settings.global_as_class  ---@api Move to top scope if sandboxing is added.
 
   ---Build the global name and replace any special characters with _
   global_name_builder[2] = this_mod or settings.fallback_mod_name
@@ -45,6 +46,8 @@ local function replace(uri, text, diffs, this_mod, settings)
   --   global_matches[start] = finish
   -- end
 
+  --- Store the first diff position
+  local first_diff_position = diffs.count + 1
   ---Replace all matching instances of `global` with the new global name
   for start, finish in pairs(global_matches) do
     util.add_diff(diffs, start, finish, global_name)
@@ -58,10 +61,18 @@ local function replace(uri, text, diffs, this_mod, settings)
       global_class_builder[5] = scenario and "." or ""
     end
 
-    ---Putting it in _G. prevents the need to disable lowecase-global
     local class_str = as_class and table_concat(global_class_builder, "")
-    local global_replacement = { "_G.", global_name, " = {} ", class_str or "\n"}
+    ---Putting it in _G. prevents the need to disable lowecase-global
+    local global_replacement = { "_G.", global_name, " = {}", class_str or "\n"}
+
     util.add_diff(diffs, 1, 1, table_concat(global_replacement, ""))
+
+    -- Account for situations where `global` is used at the begining of the first line.
+    local diff = diffs[first_diff_position]
+    if diff.start == 1 then
+      diffs[first_diff_position] = diffs[diffs.count]
+      diffs[diffs.count] = diff
+    end
   end
 end
 

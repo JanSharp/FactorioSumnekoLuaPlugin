@@ -1,10 +1,18 @@
+local fs = require('bee.filesystem') ---@type fs
+local ws = require('workspace')
+
+---@param scp scope
 ---@param plugin_args string[]
-return function(_, plugin_args)
+---@return fplugin.settings
+return function(scp, plugin_args)
+  local scp_name = scp.uri:match("[^/\\]+$")
   ---@class fplugin.settings
   local settings = {
-    mode = "folder",
     fallback_mod_name = "FallbackModName",
-    ---pluginArgs can be retrieve from the config object or as the second vararg of main file.
+    ---pluginArgs can be retrieved:
+    -- - from the config object
+    -- - as the third vararg of main file
+    -- - from scp:get('Lua.runtime.pluginArgs')
     plugin_args = plugin_args
   }
 
@@ -15,16 +23,20 @@ return function(_, plugin_args)
     local setting, option = args[i]:match("^%-%-([%-%w]+)%s?[= ]*%s?([%-%w]*)")
 
     if setting == "mode" then
-      if not (option == "folder" or option == "mods") then
-        return log.error("wrong mode for plugin: " .. option .. " expected 'mods' or 'folder'.")
+      if option == "folder" then
+        settings.mode = "folder"
+      elseif option == "mods" then
+        settings.mode = "mods"
+      else
+        log.error("wrong mode for plugin: " .. option .. " expected 'mods' or 'folder'.")
+        return ---@diagnostic disable-line: missing-return-value
       end
-      settings.mode = option
-      log.info(("Plugin running in %s mode"):format(option))
+      print(scp_name, ("running in %s mode"):format(option))
     end
 
     if setting == "global-as-class" then
       settings.global_as_class = true
-      print(_, "Global will be defined as a class")
+      print(scp_name, ("Global will be defined as a class"))
     end
 
     if setting == "disable" then
@@ -41,6 +53,17 @@ return function(_, plugin_args)
     end
   end
 
+  ---Attempt to auto determine folder mode if settings.mode is not explicitly set.
+  if not settings.mode then
+    local info_json = fs.exists(fs.path(ws.getAbsolutePath(scp.uri, "info.json")))
+    if info_json then
+      settings.mode = "folder"
+      print(scp_name, ("running in `%s` mode (auto-detected)"):format("folder"))
+    else
+      settings.mode = "mods"
+      print(scp_name, ("running in `%s` mode (auto-detected)"):format("mods"))
+    end
+  end
   return settings
 end
 
