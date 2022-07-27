@@ -6,24 +6,24 @@
 -- s = start, f = finish, p = position, no prefix = an actual string capture
 
 -- sample Arguments:
--- "Lua.runtime.pluginArgs": ["--mode mods", "--global-as-class", "--no-class-warning", "--disable event", "--disable require"]
+-- "Lua.runtime.pluginArgs": ["--mode mods", "--global-as-class", "--disable event", "--disable require"]
 
 ---Dev Notes: confirm "path/to/lua-language-server/script/", in Lua.Workspace.Library for completions
 
 local scope = require("workspace.scope")
 
-local require_module = require("factorio-plugin.require")
-local global = require("factorio-plugin.global")
-local remote = require("factorio-plugin.remote")
+local require_replace = require("factorio-plugin.require")
+local global_replace = require("factorio-plugin.global")
+local remote_replace = require("factorio-plugin.remote")
 local on_event = require("factorio-plugin.on-event")
 
 local ws_root_uri = select(2, ...) ---@type string
 local root_folder_name = ws_root_uri:match("[^/\\]+$") ---@type string
 local plugin_args = select(3, ...) ---@type table
 
+print("Plugin Loaded:", root_folder_name)
 local scp = scope.getScope(ws_root_uri)
 local settings = require("factorio-plugin.settings")(scp, plugin_args)
-print("Plugin Loaded:", root_folder_name)
 
 --[[
   In `folder` mode cache and return the mod name.\
@@ -46,15 +46,10 @@ local function get_mod_name(file_uri)
   end
 
   if mode == "mods" then
-    -- Cache The root folder path
-    local root = settings.mods_root
-    if not root then
-      root = root_folder_name
-      settings.mods_root = root
-    end
 
     -- Get the first folder after root path
-    mod_name = file_uri:match(root .. "[\\/]([^\\/]+)[\\/]") --[[@as string?]]
+    local _, s_end = file_uri:find(root_folder_name, 1, true)
+    mod_name = file_uri:match("[\\/]([^\\/]+)[\\/]", s_end + 1) --[[@as string?]]
     if not mod_name then
       log.warn(("Could not determine mod name for uri: %s in %s mode."):format(file_uri, mode))
       mod_name = settings.fallback_mod_name
@@ -81,9 +76,10 @@ function OnSetText(uri, text)
 
   local diffs = { count = 0 } ---@type Diff.ArrayWithCount
 
-  if not settings.disable_require then require_module(uri, text, diffs) end
-  if not settings.disable_global then global(uri, text, diffs, get_mod_name(uri), settings) end
-  if not settings.disable_remote then remote(uri, text, diffs) end
+  if not settings.disable_require then require_replace(uri, text, diffs) end
+  if not settings.disable_global then
+    global_replace(uri, text, diffs, get_mod_name(uri), settings) end
+  if not settings.disable_remote then remote_replace(uri, text, diffs) end
   if not settings.disable_event then on_event(uri, text, diffs) end
 
   diffs.count = nil

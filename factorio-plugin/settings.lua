@@ -1,3 +1,5 @@
+--##
+
 local fs = require('bee.filesystem') ---@type fs
 local ws = require('workspace')
 
@@ -6,21 +8,21 @@ local ws = require('workspace')
 ---@return fplugin.settings
 return function(scp, plugin_args)
   local scp_name = scp.uri:match("[^/\\]+$")
-  ---@class fplugin.settings
+
+  ---@type fplugin.settings
   local settings = {
     fallback_mod_name = "FallbackModName",
-    ---pluginArgs can be retrieved:
-    -- - from the config object
-    -- - as the third vararg of main file
-    -- - from scp:get('Lua.runtime.pluginArgs')
+    ---plugin_args can be retrieved from:
+    -- - the config object for the scope as 'Lua.rutime.pluginArgs'
+    -- - the third vararg of main plugin file
+    -- - the current scope with scp:get('Lua.runtime.pluginArgs')
     plugin_args = plugin_args
   }
 
-  local args = settings.plugin_args
-  for i = 1, #args do
+  for i = 1, #plugin_args do
 
-    ---@type fplugin.settings.available_settings, string
-    local setting, option = args[i]:match("^%-%-([%-%w]+)%s?[= ]*%s?([%-%w]*)")
+    ---@type fplugin.settings.options, string
+    local setting, option = plugin_args[i]:match("^%-%-([%-%w]+)%s?[= ]*%s?([%-%w]*)")
 
     if setting == "mode" then
       if option == "folder" then
@@ -67,13 +69,17 @@ return function(scp, plugin_args)
   return settings
 end
 
----@alias fplugin.settings.available_settings 'mode'|'global-as-class'|'disable'
+---@alias fplugin.settings.options 'mode'|'global-as-class'|'disable'
 ---@alias fplugin.settings.modules 'event'|'require'|'global'|'remote'
 ---@alias fplugin.settings.modes 'folder' | 'mods'
 
 ---@class fplugin.settings
+---@field fallback_mod_name string
+---@field plugin_args string[]
 ---@field mode fplugin.settings.modes
 ---@field mod_name? string Cached value of the mod name, not used if mode is `mods`
----@field mods_root? string Cached value of the mods root folder, not used if mode is `folder`
 ---@field global_as_class? boolean
----@field no_class_warning? boolean Disables the warning for undefined-doc-name
+---@field disable_event? boolean
+---@field disable_remote? boolean
+---@field disable_global? boolean
+---@field disable_require? boolean
