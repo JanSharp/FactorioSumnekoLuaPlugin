@@ -21,7 +21,6 @@ local ws_root_uri = select(2, ...) ---@type string
 local root_folder_name = ws_root_uri:match("[^/\\]+$") ---@type string
 local plugin_args = select(3, ...) ---@type table
 
-print("Plugin Loaded:", root_folder_name)
 local scp = scope.getScope(ws_root_uri)
 local settings = require("factorio-plugin.settings")(scp, plugin_args)
 

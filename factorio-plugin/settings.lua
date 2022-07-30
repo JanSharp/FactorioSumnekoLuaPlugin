@@ -7,6 +7,8 @@ local ws = require('workspace')
 ---@param plugin_args string[]
 ---@return fplugin.settings
 return function(scp, plugin_args)
+  local loaded_str = {"Factorio Plugin Loaded: ", "", " running in `", "", "` mode", "", ""}
+
   local scp_name = scp.uri:match("[^/\\]+$")
 
   ---@type fplugin.settings
@@ -33,12 +35,11 @@ return function(scp, plugin_args)
         log.error("wrong mode for plugin: " .. option .. " expected 'mods' or 'folder'.")
         return ---@diagnostic disable-line: missing-return-value
       end
-      print(scp_name, ("running in %s mode"):format(option))
     end
 
     if setting == "global-as-class" then
       settings.global_as_class = true
-      print(scp_name, ("Global will be defined as a class"))
+      loaded_str[7] = " `global` will be defined as a class."
     end
 
     if setting == "disable" then
@@ -57,15 +58,19 @@ return function(scp, plugin_args)
 
   ---Attempt to auto determine folder mode if settings.mode is not explicitly set.
   if not settings.mode then
-    local info_json = fs.exists(fs.path(ws.getAbsolutePath(scp.uri, "info.json")))
+    local file_path = ws.getAbsolutePath(scp.uri, "info.json")
+    local info_json = file_path and fs.exists(fs.path(file_path)) or false
     if info_json then
       settings.mode = "folder"
-      print(scp_name, ("running in `%s` mode (auto-detected)"):format("folder"))
     else
       settings.mode = "mods"
-      print(scp_name, ("running in `%s` mode (auto-detected)"):format("mods"))
     end
+    loaded_str[6] = " (auto-detected)."
   end
+
+  loaded_str[2] = scp_name
+  loaded_str[4] = settings.mode
+  print(table.concat(loaded_str, ""))
   return settings
 end
 
