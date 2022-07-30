@@ -20,8 +20,7 @@
 local function gmatch_at_start_of_line(s, pattern, init)
   local first = true
   local unpack = table.unpack
-  ---@type fun(): string|integer, ...
-  local gmatch_iterator = s:gmatch("\n"..pattern, init)
+  local gmatch_iterator = s:gmatch("\n"..pattern) ---@type fun(): string|integer, ...
   return function()
     if first then
       first = false
@@ -45,9 +44,9 @@ local function extend_chain_diff_elem_text(elem, text)
   end
 end
 
----@param diffs Diff[]
----@param start number
----@param finish number
+---@param diffs Diff.ArrayWithCount
+---@param start integer
+---@param finish integer
 ---@param replacement string
 local function add_diff(diffs, start, finish, replacement)
   local count = diffs.count
@@ -60,6 +59,7 @@ local function add_diff(diffs, start, finish, replacement)
   }
 end
 
+---@param diffs Diff.ArrayWithCount
 local function remove_diff(diffs)
   local count = diffs.count
   diffs[count] = nil
@@ -69,10 +69,9 @@ end
 ---if 'source' is a string wrapped in "" or '' get the string inside those quotes
 ---otherwise returns nil
 ---@param source string
----@return string|nil
+---@return string|false
 local function try_parse_string_literal(source)
-  ---@type string|number
-  local str, f_str = source:match("^[\"']([^\"']*)[\"']%s*()")
+  local str, f_str = source:match("^[\"']([^\"']*)[\"']%s*()") ---@type string, integer
   return f_str == #str and str
 end
 
@@ -96,12 +95,12 @@ local function use_source_to_index(chain_diff, i_in_chain_diff, source, is_liter
 end
 
 ---@class ChainDiffElem
----@field i number @ index within the text of the file
+---@field i integer @ index within the text of the file
 ---@field text nil|string @ text replacing from this elem's `i` including to the next elem's `i` excluding. When nil no diff will be created. If the last elem has `text` it will treat it as if there was another elem after with with the same `i`
 
 ---creates diffs according to the chain_diff. See ChainDiffElem class description for how it works
 ---@param chain_diff ChainDiffElem[]
----@param diffs Diff[]
+---@param diffs Diff.ArrayWithCount
 local function add_chain_diff(chain_diff, diffs)
   local prev_chain_diff_elem = chain_diff[1]
   if not prev_chain_diff_elem then return end
@@ -114,7 +113,7 @@ local function add_chain_diff(chain_diff, diffs)
       diffs[count] = {
         start = prev_chain_diff_elem.i,
         finish = chain_diff_elem.i - 1, -- finish is treated as including, which we don't want
-        text = prev_chain_diff_elem.text,
+        text = prev_chain_diff_elem.text
       }
     end
     prev_chain_diff_elem = chain_diff_elem
@@ -126,7 +125,7 @@ local function add_chain_diff(chain_diff, diffs)
     diffs[count] = {
       start = prev_chain_diff_elem.i,
       finish = prev_chain_diff_elem.i - 1,
-      text = prev_chain_diff_elem.text,
+      text = prev_chain_diff_elem.text
     }
   end
 end
