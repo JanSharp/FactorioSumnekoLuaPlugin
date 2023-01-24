@@ -1,4 +1,7 @@
 
+### 2023-01-24
+- Mark this project as deprecated as it got absorbed into the Factorio Modding Toolkit
+
 ### 2022-12-14
 - Add support for in game console commands in files by removing `/command` or any other variants at te start of a line
 
